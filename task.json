@@ -1,5 +1,5 @@
 {
-   "NovaLiveMigrations.get_and_live_migrate_random_server": [
+   "NovaLiveMigrations.live_migrate_servers_from_host": [
         {
             "args": {
                 "flavor": {
@@ -8,11 +8,13 @@
                 "image": {
                     "name": "{{ image_name }}"
                 },
-                "block_migration": false
+                "host_to_evacuate": "{{ host_to_evacuate }}",
+                "destination_host": "{{ destination_host }}",
+                "block_migration": "{{ block_migration }}"
             },
             "runner": {
                 "type": "serial",
-                "times": 2
+                "times": 1
             },
             "context": {}
         }

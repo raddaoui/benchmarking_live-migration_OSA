@@ -13,7 +13,7 @@ Introduction
 TODO: talk more on why we need live migration in the cloud. and since when It was supported in Openstack
 
 Live migration is very usefull when a compute node goes crazy and you need to evacuate all VMs residing in it to do proper maintenance for that box. It is a key feature for high Availability of VMs which is a critical need for most bussiness applications.
-
+ 
 
 Different ways to setup live migration in your Openstack Cloud
 --------------------------------------------------------------
@@ -48,7 +48,7 @@ For Volume storage, VMs are attached to their root disks volumes with iSCSI. To 
 
 Live migration can be done through the following command
 
-	nova live-migration --block-migrate { VM } { Compute-Node }
+	nova live-migration { VM } { Compute-Node }
 
 In this case, live migration will only copy the VM memory content specified above to the destination compute node.
 
@@ -73,11 +73,11 @@ For the purpose of testing and comparaison, two production OpenStack Clouds are 
 
 Each server used here has the following specifications:
 
-    __Model:__ HP DL380 Gen9
-    __Processor:__ 2x 12-core Intel E5-2680 v3 @ 2.50GHz
-    __RAM:__ 256GB RAM
-    __Disk:__ 12x 600GB 15K SAS - RAID10
-    __NICS:__ 2x Intel X710 Dual Port 10 GbE
+    `Model:` HP DL380 Gen9
+    `Processor:` 2x 12-core Intel E5-2680 v3 @ 2.50GHz
+    `RAM:` 256GB RAM
+    `Disk:` 12x 600GB 15K SAS - RAID10
+    `NICS:` 2x Intel X710 Dual Port 10 GbE
 
 More than that, a monitoring stack based on the TICK stack with  influx is deployed on both clouds so that we can follow in real time, metrics effected by the live migration.
 
@@ -148,11 +148,22 @@ Create your rally deployment and point rally to it
 	rally deployment create --file=credentials.json --name=lvm_testing
 	rally deployment use lvm_testing
 
-Use the live migration task to start benchmarking Live migration:
+Download the live migration plugin and task to start benchmarking Live migration:
 
-	git clone https://github.com/raddaoui/benchmarking_live-migration_OSA.git
-	cd live_migrator
-	rally --plugin-paths nova_live_migration.py task start task.json --task-args '{"image_name": "Ubuntu 14.04 LTS", "flavor_name": "test.large"}'
+	git clone https://github.com/raddaoui/benchmarking_live-migration_OSA.git && cd live_migrator
+
+The live migration task downloaded will live migrage all the VMs from a compute Node to another one either specified or chosen by nova depending on the need. This task takes 5 input:
+
+1. image_name
+2. flavor_name
+3. block_migration
+4. host_to_evacuate
+5. destination_host: if you specify nova here, destination compute host for each VM will be specified by nova.
+
+Run the task to evacuate a compute host and start benchmarking live migration:
+
+	rally --plugin-paths nova_live_migration.py task start task.json --task-args '{"image_name": "Ubuntu 14.04 LTS", "flavor_name": "rally.large", "block_migration": false, "host_to_evacuate": "compute03", "destination_host": "nova"}'
+
 
 Optionally, you can setup cronjobs to perform last task every number of hours to start analyzing graphs from your monitoring solution:
 

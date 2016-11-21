@@ -15,7 +15,7 @@
 
 import jsonschema
 import random
-
+import json
 from rally.common import logging
 from rally import consts
 from rally import exceptions as rally_exceptions
@@ -27,16 +27,20 @@ from rally.task import types
 from rally.task import utils as task_utils
 from rally.task import validation
 from rally.task import atomic
-
+import sys
 
 class NovaLiveMigrations(utils.NovaScenario):
     """Plugin for Live Migration specific scenarios"""
 
-    def _get_servers(self):
-        """Returns all servers"""
+    def _get_servers_from_compute(self, host_to_evacuate):
+        """ Returns servers of a specific compute node """
 #        import pdb; pdb.set_trace()
         servers = self._list_servers()
-        return servers
+        servers_to_migrate = []
+        for server in servers:
+                if server.to_dict()['OS-EXT-SRV-ATTR:host'] == host_to_evacuate:
+                        servers_to_migrate.append(server)
+        return servers_to_migrate
 
 
 
@@ -46,31 +50,24 @@ class NovaLiveMigrations(utils.NovaScenario):
     @validation.required_services(consts.Service.NOVA)
     @validation.required_openstack(admin=True, users=True)
     @scenario.configure()
-    @atomic.action_timer("get_and_live_migrate_random_server")
-    def get_and_live_migrate_random_server(self, image,
-                                     flavor, block_migration=False,
-                                     disk_over_commit=False, min_sleep=0,
-                                     max_sleep=0, **kwargs):
-        """Live Migrate a server.
-        This scenario launches a VM on a compute node available in
-        the availability zone and then migrates the VM to another
+    @atomic.action_timer("live_migrate_servers_from_host")
+    def live_migrate_servers_from_host(self, image, host_to_evacuate,
+                                     flavor, block_migration=False, destination_host=None,
+                                     disk_over_commit=False, **kwargs):
+        """Live Migrate servers.
+        This scenario migrates all the VM in the specified compute host to another
         compute node on the same availability zone.
-        Optional 'min_sleep' and 'max_sleep' parameters allow the scenario
-        to simulate a pause between VM booting and running live migration
-        (of random duration from range [min_sleep, max_sleep]).
         :param image: image to be used to boot an instance
         :param flavor: flavor to be used to boot an instance
         :param block_migration: Specifies the migration type
-        :param disk_over_commit: Specifies whether to allow overcommit
                                  on migrated instance or not
-        :param min_sleep: Minimum sleep time in seconds (non-negative)
-        :param max_sleep: Maximum sleep time in seconds (non-negative)
-        :param kwargs: Optional additional arguments for server creation
         """
-        servers = self._get_servers()
-        self.sleep_between(min_sleep, max_sleep)
-
-        new_host = self._find_host_to_migrate(servers[0])
-	for server in servers
-        	self._live_migrate(server, new_host,
-                	           block_migration, disk_over_commit)
+        servers_to_migrate = self._get_servers_from_compute(host_to_evacuate)
+        print "migrating servers: " + str(servers_to_migrate)
+        for server in servers_to_migrate:
+                if destination_host != 'nova':
+                        new_host = destination_host
+                else:
+                        new_host = self._find_host_to_migrate(server)
+                self._live_migrate(server, new_host,
+                                  block_migration, disk_over_commit)
